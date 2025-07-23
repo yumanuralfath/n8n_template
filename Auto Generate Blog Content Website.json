@@ -1,0 +1,582 @@
+{
+  "name": "Auto Generate Blog Content Website",
+  "nodes": [
+    {
+      "parameters": {
+        "functionCode": "// Process SerpAPI results to extract useful information\nconst searchData = $input.first().json;\nlet context = '';\n\nif (searchData && searchData.organic_results) {\n  // Extract snippets from top 3 results\n  const snippets = searchData.organic_results\n    .slice(0, 3)\n    .map(result => {\n      const title = result.title || '';\n      const snippet = result.snippet || '';\n      return `**${title}**: ${snippet}`;\n    })\n    .filter(snippet => snippet.length > 10);\n  \n  context = snippets.join('\\n\\n');\n}\n\n// If no good results, provide basic context\nif (!context) {\n  context = `Limited information available about `{{ $('Extract Topic & Slug1').first().json.topic }}`. This topic may be very new, specialized, or require more specific search terms.`;\n}\n\nreturn {\n  context: context,\n  source: 'google_search',\n  topic: {{ $('Extract Topic & Slug1').first().json.topic }};\n"
+      },
+      "id": "88f14a9e-633a-47aa-bb23-2ee24854832a",
+      "name": "Process Google Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        5888,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process Wikipedia results\nconst wikiData = $input.first().json;\nlet context = '';\n\nif (wikiData && wikiData.extract) {\n  context = wikiData.extract;\n  \n  // Add additional information if available\n  if (wikiData.description) {\n    context = `${wikiData.description}\\n\\n${context}`;\n  }\n}\n\nreturn {\n  context: context,\n  source: 'wikipedia',\n  topic: $('Extract Topic & Slug1').first().json.topic,\n  title: wikiData.title || '',\n  url: wikiData.content_urls?.desktop?.page || ''\n};\n"
+      },
+      "id": "478748ef-38c4-4794-849a-a4993e0c1f70",
+      "name": "Process Wikipedia Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        5664,
+        1648
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "787423f6-5db2-4e8f-bfc8-a75aeb48c2dc",
+      "name": "Merge Search Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [
+        6112,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Create comprehensive prompt using all available context\nconst topicData = $('Extract Topic & Slug1').first().json;\nconst topic = topicData.topic;\nconst slug = topicData.slug;\nconst date = topicData.date;\n\n// Combine all context sources\nlet allContext = '';\nconst inputs = $input.all();\n\ninputs.forEach((input, index) => {\n  const data = input.json;\n  if (data.context && data.context.trim()) {\n    const sourceLabel = data.source === 'wikipedia' ? 'Wikipedia' : 'Web Search';\n    allContext += `\\n\\n=== ${sourceLabel} Information ===\\n${data.context}`;\n  }\n});\n\n// If no context available, provide basic instruction\nif (!allContext.trim()) {\n  allContext = 'No specific context available. Please create content based on general knowledge.';\n}\n\n// Create comprehensive prompt for blog generation\nconst prompt = `Write a comprehensive, well-researched blog post about ${topic} in markdown format.\n\nAvailable Context:${allContext}\n\nPlease create a detailed blog post with the following structure:\n1. An engaging introduction that hooks the reader\n2. Main content sections with clear subheadings (use ## for main sections, ### for subsections)\n3. Include relevant examples, case studies, or practical applications\n4. If it's a technical topic, include code examples with proper syntax highlighting\n5. Add tips, best practices, or actionable advice where appropriate\n6. A strong conclusion that summarizes key points\n\nWriting Guidelines:\n- Write 1000-1500 words minimum\n- Use a professional yet accessible tone\n- Include bullet points or numbered lists where helpful\n- Add relevant internal linking suggestions (use placeholder links)\n- Make it SEO-friendly with natural keyword usage\n- Ensure content is original and valuable to readers\n\nIMPORTANT: \n- Do NOT include frontmatter (title, date, etc.) - this will be added separately\n- Start directly with the introduction\n- Use proper markdown formatting\n- Make the content engaging and informative`;\n\nreturn {\n  topic: topic,\n  slug: slug,\n  date: date,\n  context: allContext,\n  prompt: prompt,\n  contextSources: inputs.map(i => i.json.source).filter(Boolean)\n};"
+      },
+      "id": "eb616256-a378-4fc1-9812-f17f4a0cf2d8",
+      "name": "Create Comprehensive Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        6336,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "success-condition",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "61d33797-fd0a-4a09-978a-e2388409e3a3",
+      "name": "Check GitHub Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        7232,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').first().json.message.chat.id }}",
+        "text": "❓ **Format tidak valid**\\n\\nGunakan format: `#blog [topik yang ingin dibuat]`\\n\\n📝 **Contoh:**\\n• `#blog Python FastAPI Tutorial`\\n• `#blog Docker Container Best Practices`\\n• `#blog React Hooks Guide`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "2c74dc5b-b040-4a9a-8d70-3f99d80ff398",
+      "name": "Invalid Format Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4992,
+        2016
+      ],
+      "webhookId": "195b8dcf-c057-43ed-8049-1b226a5169a4",
+      "credentials": {
+        "telegramApi": {
+          "id": "MvduJAmkBx25KJ9G",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "35240ca2-7316-4c97-b96e-9a16d79edf8d",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        4544,
+        1808
+      ],
+      "webhookId": "telegram-webhook-id",
+      "credentials": {
+        "telegramApi": {
+          "id": "MvduJAmkBx25KJ9G",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "#blog",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3b8994cd-96cc-414c-a310-96ce57802d2a",
+      "name": "IF Filter Blog1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        4768,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract topic and create slug from Telegram message\nconst messageText = $input.first().json.message.text;\n\n// Remove #blog hashtag and clean the text\nconst topic = messageText.replace('#blog', '').trim();\n\n// Create slug from topic\nconst slug = topic\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s-]/g, '') // Remove special characters\n  .replace(/\\s+/g, '-') // Replace spaces with hyphens\n  .replace(/-+/g, '-') // Remove multiple consecutive hyphens\n  .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens\n\n// Generate current date for frontmatter\nconst currentDate = new Date().toISOString().split('T')[0];\n\nreturn {\n  topic: topic,\n  slug: slug,\n  date: currentDate,\n  originalMessage: messageText\n};"
+      },
+      "id": "b519158c-f744-46c0-b53e-c261bd5626c0",
+      "name": "Extract Topic & Slug1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        4992,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://en.wikipedia.org/api/rest_v1/page/summary/{{ encodeURIComponent($json.topic.replace(/\\s+/g, '_')) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-workflow/1.0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f019e653-7746-4a73-ab15-cc363c51a58f",
+      "name": "Wikipedia Search1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5216,
+        1808
+      ],
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "body": "={\n  \"model\": \"deepseek/deepseek-r1-0528:free\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.prompt }}\"\n    }\n  ]\n  \n}",
+        "options": {}
+      },
+      "id": "b44e77a6-2204-406e-b9ee-69780918ec31",
+      "name": "OpenRouter Chat1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6560,
+        1808
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "vhGrSTMSr0eiYEuS",
+          "name": "DEEPSEEK TOKEN"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Convert AI response to markdown format with enhanced frontmatter\nconst previousData = $('Create Comprehensive Prompt').first().json;\nconst aiResponse = $input.first().json;\n\n// Extract the generated content\nlet content = '';\nif (aiResponse.choices && aiResponse.choices[0] && aiResponse.choices[0].message) {\n  content = aiResponse.choices[0].message.content;\n} else {\n  throw new Error('No valid response from AI');\n}\n\n// Create enhanced frontmatter with SEO elements\nconst contextSources = previousData.contextSources || [];\nconst sourceNote = contextSources.length > 0 ? `\\n# Sources: ${contextSources.join(', ')}` : '';\n\nconst frontmatter = `---\ntitle: \"${previousData.topic}\"\ndate: \"${previousData.date}\"\ndraft: false\nauthor: \"Yuma Nur Alfath\"\ndescription: \"A comprehensive guide about ${previousData.topic} - explore key concepts, practical applications, and expert insights.\"\ntags: [\"blog\", \"tech\", \"${previousData.slug}\"]\ncategory: \"${previousData.topic}\"\nslug: \"${previousData.slug}\"\nexcerpt:\"{{ $json[\"choices\"][\"0\"][\"message\"][\"reasoning\"] }}\"\nimage: \"{{ $node[\"Wikipedia Search1\"].json[\"thumbnail\"][\"source\"] ||\" \" }}\"\nmeta_description: \"Learn everything about ${previousData.topic} in this comprehensive guide. Practical tips, examples, and expert insights included.\"\nkeywords: [\"${previousData.topic.toLowerCase()}\", \"guide\", \"tutorial\"]\n---${sourceNote}\n\n`;\n\n// Combine frontmatter with content\nconst fullMarkdown = frontmatter + content;\n\n// Create filename with date prefix for better organization\nconst filename = `${previousData.date}-${previousData.slug}.md`;\n\nreturn {\n  topic: previousData.topic,\n  slug: previousData.slug,\n  filename: filename,\n  content: fullMarkdown,\n  date: previousData.date,\n  wordCount: content.split(' ').length,\n  sources: contextSources\n};"
+      },
+      "id": "c03b36e1-5d5d-497a-8448-9c41fd517815",
+      "name": "Convert to Markdown1",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        6784,
+        1808
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "owner": {
+          "__rl": true,
+          "value": "yumanuralfath",
+          "mode": "name"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "NextPortoYuma",
+          "mode": "name"
+        },
+        "filePath": "=src/content/blog/{{ $json.filename }}",
+        "fileContent": "={{ $json.content }}",
+        "commitMessage": "=Add blog post: {{ $json.topic }}"
+      },
+      "id": "4208ab11-edff-4fa7-8218-65171a018458",
+      "name": "GitHub Create File1",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [
+        7008,
+        1808
+      ],
+      "webhookId": "e85988bc-8295-428a-875c-347610e8fd94",
+      "credentials": {
+        "githubApi": {
+          "id": "IvseB6BFRYkcLWJg",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').first().json.message.chat.id }}",
+        "text": "=✅ **Blog post berhasil dibuat!**\\n\\n📝 **Topic:** {{ $('Convert to Markdown1').first().json.topic }}\\n🔗 **File:** {{ $('Convert to Markdown1').first().json.filename }}\\n📅 **Date:** {{ $('Convert to Markdown1').first().json.date }}\\n📊 **Word Count:** ~{{ $('Convert to Markdown1').first().json.wordCount }} words\\n🔍 **Sources:** {{ $('Convert to Markdown1').first().json.sources.join(', ') || 'General knowledge' }}\\n\\n🚀 Blog post telah dipush ke GitHub repository!\\n\\n📎 Path: `content/blog/{{ $('Convert to Markdown1').first().json.filename }}`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "150c864a-a838-4667-962b-e56d5774af69",
+      "name": "Telegram Success Reply1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        7456,
+        1664
+      ],
+      "webhookId": "3a965d97-0f4c-4b6a-8576-81f740c535c2",
+      "credentials": {
+        "telegramApi": {
+          "id": "MvduJAmkBx25KJ9G",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger1').first().json.message.chat.id }}",
+        "text": "=❌ **Error saat membuat blog post**\\n\\n🔍 **Topic:** {{ $('Extract Topic & Slug1').first()?.json?.topic || 'Unknown' }}\\n⚠️ **Issue:** Gagal menyimpan ke GitHub atau terjadi error dalam proses\\n\\n💡 **Solusi:**\\n- Pastikan format: `#blog [topik blog]`\\n- Coba dengan topik yang lebih spesifik\\n- Tunggu beberapa saat lalu coba lagi\\n\\n📝 **Contoh:** `#blog Machine Learning Basics`",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "ba84c040-e8a0-4b9a-bb6d-0f0d5566626e",
+      "name": "Telegram Error Reply1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        7456,
+        1952
+      ],
+      "webhookId": "bad25054-1032-4cad-b932-b5776e310f57",
+      "credentials": {
+        "telegramApi": {
+          "id": "MvduJAmkBx25KJ9G",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "q": "={{ $('Extract Topic & Slug1').first().json.topic }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-serpapi.serpApi",
+      "typeVersion": 1,
+      "position": [
+        5648,
+        2112
+      ],
+      "id": "76bed1c6-2e0a-4c15-9e0c-cd9cd128791d",
+      "name": "Google search",
+      "credentials": {
+        "serpApi": {
+          "id": "8FFecYlNOeGkrbD6",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "05ede0bd-aa4c-4a55-ac12-98a2cab78c1c",
+              "leftValue": "={{ $json.extract }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5424,
+        1808
+      ],
+      "id": "cedfee58-3fbb-4d97-a906-496d1b71e883",
+      "name": "IF (Check Wiki Result)1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Process Google Results": {
+      "main": [
+        [
+          {
+            "node": "Merge Search Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Process Wikipedia Results": {
+      "main": [
+        [
+          {
+            "node": "Merge Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Search Results": {
+      "main": [
+        [
+          {
+            "node": "Create Comprehensive Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Comprehensive Prompt": {
+      "main": [
+        [
+          {
+            "node": "OpenRouter Chat1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check GitHub Success": {
+      "main": [
+        [
+          {
+            "node": "Telegram Success Reply1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Error Reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "IF Filter Blog1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Filter Blog1": {
+      "main": [
+        [
+          {
+            "node": "Extract Topic & Slug1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Format Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Topic & Slug1": {
+      "main": [
+        [
+          {
+            "node": "Wikipedia Search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wikipedia Search1": {
+      "main": [
+        [
+          {
+            "node": "IF (Check Wiki Result)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat1": {
+      "main": [
+        [
+          {
+            "node": "Convert to Markdown1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to Markdown1": {
+      "main": [
+        [
+          {
+            "node": "GitHub Create File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Create File1": {
+      "main": [
+        [
+          {
+            "node": "Check GitHub Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google search": {
+      "main": [
+        [
+          {
+            "node": "Process Google Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF (Check Wiki Result)1": {
+      "main": [
+        [
+          {
+            "node": "Process Wikipedia Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0f964754-9430-4c82-8da5-4ed799b005bc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5ce5c7bb69689bb5026a039f71db56efa2d930850a7172513b11beb1d0cdb7c3"
+  },
+  "id": "50Yq42jCaVsi3YuR",
+  "tags": []
+}
