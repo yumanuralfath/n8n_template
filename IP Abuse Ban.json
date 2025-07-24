@@ -8,8 +8,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2784,
-        688
+        3008,
+        608
       ],
       "id": "afa1d684-a760-4609-8cbb-2d2cd9c18463",
       "name": "Prepare WAF Rule"
@@ -54,8 +54,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3008,
-        688
+        3232,
+        608
       ],
       "id": "71226876-b5dd-4264-87ce-131a57973017",
       "name": "Create WAF Rule",
@@ -75,7 +75,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3504,
+        3680,
         512
       ],
       "id": "92c033f3-09c7-40c9-8dcf-0fec8ea9ab95",
@@ -124,7 +124,7 @@
       "typeVersion": 3.4,
       "position": [
         1888,
-        880
+        896
       ],
       "id": "967df987-4c0d-401d-9cc9-9e47fe5f91e9",
       "name": "Save IP Ban Data1"
@@ -146,7 +146,7 @@
       "typeVersion": 4.2,
       "position": [
         2112,
-        880
+        896
       ],
       "id": "fdf4626a-346d-4e7c-9dc0-2358a3a7a6da",
       "name": "Cloudflare Block IP1",
@@ -210,8 +210,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2560,
-        784
+        2784,
+        704
       ],
       "id": "8fe99b94-061e-45e8-8aef-95e5625d9679",
       "name": "Prepare Success Data1"
@@ -251,8 +251,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2560,
-        1072
+        2784,
+        992
       ],
       "id": "528e5648-c594-437b-89b0-d81921c22168",
       "name": "Prepare Failure Data1"
@@ -266,8 +266,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2784,
-        880
+        3008,
+        800
       ],
       "id": "798ab076-f6d6-46ab-80cb-13ce32dce9fe",
       "name": "Send Success Message1",
@@ -290,8 +290,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2816,
-        1072
+        3008,
+        992
       ],
       "id": "39b79647-dfbf-4517-a16b-f89156a24610",
       "name": "Send Failure Message1",
@@ -315,7 +315,7 @@
       "typeVersion": 2,
       "position": [
         1440,
-        880
+        896
       ],
       "id": "4d695611-c4a9-48cc-84cd-55fdecf8425f",
       "name": "Webhook",
@@ -337,7 +337,7 @@
       "typeVersion": 1.4,
       "position": [
         1664,
-        880
+        896
       ],
       "id": "4c12df45-5d28-465f-ac26-00e4239e74c2",
       "name": "Respond to Webhook"
@@ -354,7 +354,7 @@
           "conditions": [
             {
               "id": "29013863-282c-4139-8814-db69bc84089c",
-              "leftValue": "={{ $json.success }}",
+              "leftValue": "={{ $('Cloudflare Block IP1').item.json.success }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -370,8 +370,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2336,
-        880
+        2560,
+        800
       ],
       "id": "998999f1-fbe0-4453-93d5-d932bc7d47d4",
       "name": "If1"
@@ -404,8 +404,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3216,
-        688
+        3456,
+        608
       ],
       "id": "718c91dd-41be-44c4-81c7-1ea0223b8a02",
       "name": "If"
@@ -419,8 +419,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3488,
-        736
+        3680,
+        704
       ],
       "id": "4668d6d3-6888-4472-90a1-f6ce77328e08",
       "name": "Send Failure Message",
@@ -431,9 +431,97 @@
           "name": "Telegram account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "58b1e1c6-3236-4ed2-867d-ad1dd83a19bf",
+              "leftValue": "={{ $json.result.rules[0].expression }}",
+              "rightValue": "={{ $('Save IP Ban Data1').item.json.ip }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2336,
+        896
+      ],
+      "id": "d56f4bef-2f2d-48f5-bb81-0ff3350e3277",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "errorMessage": "IP SUDAH ADA"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        992
+      ],
+      "id": "815d096a-1194-431d-b071-e91cbe32118d",
+      "name": "Stop and Error"
     }
   ],
-  "pinData": {},
+  "pinData": {
+    "Cloudflare Block IP1": [
+      {
+        "json": {
+          "result": {
+            "description": "",
+            "id": "0b1d0749a91d4e3181ac55992c15a911",
+            "kind": "zone",
+            "last_updated": "2025-07-24T01:27:11.795595Z",
+            "name": "default",
+            "phase": "http_request_firewall_custom",
+            "rules": [
+              {
+                "action": "block",
+                "description": "IP BAN BANGKE",
+                "enabled": true,
+                "expression": "(ip.src in {172.68.242.120 159.223.90.139 185.177.72.10})",
+                "id": "f18651f457174cda862c91f1dc41a7bd",
+                "last_updated": "2025-07-24T01:27:11.795595Z",
+                "ref": "f18651f457174cda862c91f1dc41a7bd",
+                "version": "12"
+              }
+            ],
+            "source": "firewall_custom",
+            "version": "19"
+          },
+          "success": true,
+          "errors": [],
+          "messages": []
+        }
+      }
+    ],
+    "Save IP Ban Data1": [
+      {
+        "json": {
+          "ip": "185.177.72.10",
+          "reason": "abuse detected from rate limiter",
+          "timestamp": "2025-07-23T21:27:15.203-04:00",
+          "zone_id": "f9259bfe590d9393b1f250d59dcf2de8"
+        }
+      }
+    ]
+  },
   "connections": {
     "Prepare WAF Rule": {
       "main": [
@@ -472,7 +560,7 @@
       "main": [
         [
           {
-            "node": "If1",
+            "node": "If2",
             "type": "main",
             "index": 0
           }
@@ -563,13 +651,31 @@
           }
         ]
       ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "225a8256-60a9-4b59-ac15-8cf4f11a0b15",
+  "versionId": "7defad9e-4fa8-4844-afb3-a702044b2682",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5ce5c7bb69689bb5026a039f71db56efa2d930850a7172513b11beb1d0cdb7c3"
