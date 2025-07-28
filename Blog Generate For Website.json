@@ -9,7 +9,9 @@
               "field": "weeks",
               "triggerAtDay": [
                 0,
-                5
+                5,
+                1,
+                3
               ]
             }
           ]
@@ -247,7 +249,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Create comprehensive prompt using all available context\nconst topic = $input.first().json.ContextFinal;\n\n// Create comprehensive prompt for blog generation\nconst prompt = `Write a comprehensive, well-researched blog post about ${topic} in markdown format.\n\nPlease create a detailed blog post with the following structure:\n1. An engaging introduction that hooks the reader\n2. Main content sections with clear subheadings (use ## for main sections, ### for subsections)\n3. Include relevant examples, case studies, or practical applications\n4. If it's a technical topic, include code examples with proper syntax highlighting\n5. Add tips, best practices, or actionable advice where appropriate\n6. A strong conclusion that summarizes key points\n\nWriting Guidelines:\n- Write 1000-1500 words minimum\n- Use a professional yet accessible tone\n- Include bullet points or numbered lists where helpful\n- Add relevant internal linking suggestions (use placeholder links)\n- Make it SEO-friendly with natural keyword usage\n- Ensure content is original and valuable to readers\n- Use Bahasa Indonesia\n\nIMPORTANT: \n- Do NOT include frontmatter (title, date, etc.) - this will be added separately\n- Start directly with the introduction\n- Use proper markdown formatting\n- Make the content engaging and informative`;\n\nreturn {\n  topic: topic,\n  prompt: prompt,\n};"
+        "jsCode": "// Create comprehensive prompt using all available context\nconst topic = $input.first().json.ContextFinal;\n\n// Create comprehensive prompt for blog generation\nconst prompt = `Write a comprehensive, well-researched blog post about ${topic} in markdown format.\n\nPlease create a detailed blog post with the following structure:\n1. An engaging introduction that hooks the reader\n2. Main content sections with clear subheadings (use ## for main sections, ### for subsections)\n3. Include relevant examples, case studies, or practical applications\n4. If it's a technical topic, include code examples with proper syntax highlighting\n5. Add tips, best practices, or actionable advice where appropriate\n6. A strong conclusion that summarizes key points\n\nWriting Guidelines:\n- Write 1000-1500 words minimum\n- Use a professional yet accessible tone\n- Include bullet points or numbered lists where helpful\n- Add relevant external linking suggestions (use placeholder links)\n- Make it SEO-friendly with natural keyword usage\n- Ensure content is original and valuable to readers\n- Use Bahasa Indonesia\n\nIMPORTANT: \n- Do NOT include frontmatter (title, date, etc.) - this will be added separately\n- Start directly with the introduction\n- Use proper markdown formatting\n- Make the content engaging and informative`;\n\nreturn {\n  topic: topic,\n  prompt: prompt,\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -287,7 +289,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const defaultTopics = [\n  \"Teknologi\", \"Inovasi\", \"Kesehatan Digital\", \"AI dan Otomatisasi\", \"Startup Indonesia\",\n  \"Pendidikan\", \"Ekonomi Digital\", \"Gaya Hidup\", \"Lingkungan\", \"Seni dan Kreativitas\",\n  \"Game & E-sports\", \"Kecerdasan Buatan\", \"Sains Populer\", \"Keamanan Siber\"\n];\n\n// Pilih satu topik secara acak dari daftar\nconst randomDefaultTopic = defaultTopics[Math.floor(Math.random() * defaultTopics.length)];\n\nconst request = $input?.first()?.json?.message?.text || \"\";\nconst match = request.match(/#q\\s+([^\\n:]+)/i);\n\n// Gunakan hasil pencocokan atau fallback ke topik acak\nconst topic = match ? match[1].trim() : randomDefaultTopic;\n\nreturn {\n  json: {\n    detectedTopic: topic,\n  }\n};\n"
+        "jsCode": "const defaultTopics = [\n  \"Teknologi\", \"Inovasi\", \"AI dan Otomatisasi\", \"Startup Indonesia\",\n  \"Pendidikan\", \"Ekonomi Digital\", \"Gaya Hidup\", \"Lingkungan\",\n  \"Game & E-sports\", \"Kecerdasan Buatan\", \"Sains Populer\", \"Keamanan Siber\"\n];\n\n// Pilih satu topik secara acak dari daftar\nconst randomDefaultTopic = defaultTopics[Math.floor(Math.random() * defaultTopics.length)];\n\nconst request = $input?.first()?.json?.message?.text || \"\";\nconst match = request.match(/#q\\s+([^\\n:]+)/i);\n\n// Gunakan hasil pencocokan atau fallback ke topik acak\nconst topic = match ? match[1].trim() : randomDefaultTopic;\n\nreturn {\n  json: {\n    detectedTopic: topic,\n  }\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -300,7 +302,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Initialize content and metadata\nconst date = new Date().toISOString().split('T')[0];\nconst contentRaw = $('Open Router Chat').first().json.choices[0].message.content;\nconst category = $('Select Topic').first().json.detectedTopic;\n// const excerpt = $('Create Comprehensive Prompt').first().json.topic;\n\nconst cleaned = contentRaw\n  .replace(/^##\\s*/gm, '')             // hapus heading ## \n  .replace(/\\*\\*(.*?)\\*\\*/g, '$1')     // hapus bold markdown **\n  .replace(/\\\\n/g, ' ')                // hilangkan newline escape \\n\n  .replace(/\\s+/g, ' ')                // rapikan spasi ganda\n  .trim();\n\nconst excerpt = cleaned.split(' ').slice(0, 15).join(' ') + '...';\nconst dateNow = date;\n\n\nlet content = '';\nconst reasoning = $('Open Router Chat').first().json.choices[0].message.reasoning;\n\nif (typeof contentRaw === 'string') {\n  // Cek apakah mengandung \"\\n\" (escaped)\n  if (contentRaw.includes('\\\\n')) {\n    content = contentRaw.replace(/\\\\n/g, '\\n').trim();\n  } else {\n    content = contentRaw.trim();\n  }\n}\n\nconst shortSlug = excerpt\n  .split(' ')\n  .slice(0, 5)\n  .join(' ')\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s-]/g, '')       // Remove special characters\n  .replace(/\\s+/g, '-')               // Replace spaces with hyphens\n  .replace(/-+/g, '-')                // Collapse multiple hyphens\n  .replace(/^-|-$/g, '');             // Trim leading/trailing hyphens\n\nconst title = $('parsed json').first().json.judul;\nconst thumb = $input.first().json.results[0].urls.thumb\nconst smallimg = $input.first().json.results[0].urls.small\nconst safeExcerpt = excerpt.replace(/\"/g, '\\\\\"');\n\nconst imageBlock = `<p align=\"center\">\n  <img src=\"${smallimg}\" alt=\"${shortSlug}\" />\n</p>\\n\\n`;\n\n// Create frontmatter block\nconst frontmatter = `---\ntitle: \"${title}\"\ndate: \"${dateNow}\"\ncategory: \"${category}\"\nexcerpt: \"${safeExcerpt}\"\nimage: \"${thumb}\"\n---\n`;\n\n// Combine with content\nconst fullMarkdown = frontmatter + '\\n' + imageBlock + content;\n\n// Generate filename\nconst filename = `${dateNow}-${shortSlug}.md`;\n\n// Return result\nreturn {\n  frontmatter: frontmatter,\n  topic: excerpt,\n  filename: filename,\n  content: fullMarkdown,\n  reasoning: reasoning\n};\n"
+        "jsCode": "// Initialize content and metadata\nconst date = new Date().toISOString().split('T')[0];\nconst contentRaw = $('Open Router Chat').first().json.choices[0].message.content;\nconst category = $('Select Topic').first().json.detectedTopic;\n// const excerpt = $('Create Comprehensive Prompt').first().json.topic;\n\nconst cleaned = contentRaw\n  .replace(/^##\\s*/gm, '')             // hapus heading ## \n  .replace(/\\*\\*(.*?)\\*\\*/g, '$1')     // hapus bold markdown **\n  .replace(/\\\\n/g, ' ')                // hilangkan newline escape \\n\n  .replace(/\\s+/g, ' ')                // rapikan spasi ganda\n  .trim();\n\nconst excerpt = cleaned.split(' ').slice(0, 15).join(' ') + '...';\nconst dateNow = date;\n\n\nlet content = '';\nconst reasoning = $('Open Router Chat').first().json.choices[0].message.reasoning;\n\nif (typeof contentRaw === 'string') {\n  // Cek apakah mengandung \"\\n\" (escaped)\n  if (contentRaw.includes('\\\\n')) {\n    content = contentRaw.replace(/\\\\n/g, '\\n').trim();\n  } else {\n    content = contentRaw.trim();\n  }\n}\n\nconst shortSlug = excerpt\n  .split(' ')\n  .slice(0, 5)\n  .join(' ')\n  .toLowerCase()\n  .replace(/[^a-z0-9\\s-]/g, '')       // Remove special characters\n  .replace(/\\s+/g, '-')               // Replace spaces with hyphens\n  .replace(/-+/g, '-')                // Collapse multiple hyphens\n  .replace(/^-|-$/g, '');             // Trim leading/trailing hyphens\n\nconst title = $('parsed json').first().json.judul;\nconst smallimg = $input.first().json.results[0].urls.small\nconst safeExcerpt = excerpt.replace(/\"/g, '\\\\\"');\n\nconst imageBlock = `<p align=\"center\">\n  <img src=\"${smallimg}\" alt=\"${shortSlug}\" />\n</p>\\n\\n`;\n\n// Create frontmatter block\nconst frontmatter = `---\ntitle: \"${title}\"\ndate: \"${dateNow}\"\ncategory: \"${category}\"\nexcerpt: \"${safeExcerpt}\"\nimage: \"${smallimg}\"\n---\n`;\n\n// Combine with content\nconst fullMarkdown = frontmatter + '\\n' + imageBlock + content;\n\n// Generate filename\nconst filename = `${dateNow}-${shortSlug}.md`;\n\n// Return result\nreturn {\n  frontmatter: frontmatter,\n  topic: excerpt,\n  filename: filename,\n  content: fullMarkdown,\n  reasoning: reasoning\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -334,7 +336,7 @@
       "typeVersion": 1.1,
       "position": [
         2800,
-        -96
+        64
       ],
       "id": "f05f0b29-e2ff-417d-9f6d-2d2601906869",
       "name": "Create a blog post",
@@ -433,8 +435,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3024,
-        -96
+        2992,
+        64
       ],
       "id": "9ec3bb26-4dda-422b-b30b-6ef1d646f555",
       "name": "check github"
@@ -448,8 +450,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3248,
-        -192
+        3184,
+        -48
       ],
       "id": "3af5b87d-fd24-42fe-9487-64bc00d8196e",
       "name": "Send a text message3",
@@ -470,8 +472,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3248,
-        0
+        3200,
+        160
       ],
       "id": "4ed735ce-dd71-4a5e-894c-765f1989f3a3",
       "name": "Send a text message4",
@@ -512,7 +514,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let judulRaw = $input.first().json.choices[0].message.content;\n// Bersihkan blok kode jika ada\nif (judulRaw.startsWith(\"\")) {\n  judulRaw = judulRaw.replace(/(?:json)?\\n?([\\s\\S]*?)```/, '$1').trim();\n}\nconst parsed = JSON.parse(judulRaw);\n\nreturn {\n  judul: parsed.judul\n};"
+        "jsCode": "let judulRaw = $input.first().json.choices[0].message.content.trim();\n\n// Hapus blok kode markdown jika ada\nif (judulRaw.startsWith(\"```json\") || judulRaw.startsWith(\"```\")) {\n  judulRaw = judulRaw.replace(/^```(?:json)?\\s*/i, \"\").replace(/```$/, \"\").trim();\n}\n\nconst parsed = JSON.parse(judulRaw);\n\nreturn {\n  judul: parsed.judul\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -737,7 +739,7 @@
         "genericAuthType": "httpBearerAuth",
         "sendBody": true,
         "contentType": "raw",
-        "body": "={\n  \"model\": \"qwen/qwen3-235b-a22b-07-25:free\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah seorang penulis blog profesional. Tugas Anda adalah membuat judul blog yang menarik, relevan, dan SEO-friendly dalam Bahasa Indonesia. Selalu berikan respons dalam format JSON yang valid tanpa tambahan teks atau penjelasan.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Buatkan satu judul blog yang menarik dan SEO-friendly dalam Bahasa Indonesia untuk topik: {{ $json.topic }}\\n\\nPersyaratan judul:\\n- Maksimal 60 karakter untuk SEO\\n- Menarik perhatian pembaca\\n- Relevan dengan topik\\n- Menggunakan kata kunci yang tepat\\n\\nRespond ONLY with valid JSON in this exact format:\\n{\\\"judul\\\":\\\"your title here\\\"}\"\n    }\n  ]\n}",
+        "body": "={\n  \"model\": \"deepseek/deepseek-chat-v3-0324:free\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah seorang penulis blog profesional. Tugas Anda adalah membuat judul blog yang menarik, relevan, dan SEO-friendly dalam Bahasa Indonesia. Selalu berikan respons dalam format JSON yang valid tanpa tambahan teks atau penjelasan.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Buatkan satu judul blog yang menarik dan SEO-friendly dalam Bahasa Indonesia untuk topik: {{ $json.topic }}\\n\\nPersyaratan judul:\\n- Maksimal 60 karakter untuk SEO\\n- Menarik perhatian pembaca\\n- Relevan dengan topik\\n- Menggunakan kata kunci yang tepat\\n\\nRespond ONLY with valid JSON in this exact format:\\n{\\\"judul\\\":\\\"your title here\\\"}\"\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -768,7 +770,6 @@
         "options": {
           "limitWaitTime": {
             "values": {
-              "resumeAmount": 45,
               "resumeUnit": "minutes"
             }
           }
@@ -806,22 +807,22 @@
               "rightValue": "",
               "operator": {
                 "type": "boolean",
-                "operation": "true",
+                "operation": "false",
                 "singleValue": true
               }
             },
             {
-              "id": "3556dfe2-a016-47d7-bb3d-7253bb49945f",
-              "leftValue": "={{ $('Markdown Output').item.json.frontmatter }}",
+              "id": "ef371332-0de4-4282-9814-d0bbeaa66c35",
+              "leftValue": "={{ $json.data.approved }}",
               "rightValue": "",
               "operator": {
-                "type": "string",
+                "type": "boolean",
                 "operation": "exists",
                 "singleValue": true
               }
             }
           ],
-          "combinator": "or"
+          "combinator": "and"
         },
         "options": {}
       },
@@ -843,8 +844,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        2800,
-        96
+        2784,
+        -128
       ],
       "id": "1125936b-aa22-492f-beb2-691e8ab20598",
       "name": "Send a text message5",
@@ -1277,53 +1278,12 @@
         }
       }
     ],
-    "Send valid query gacha": [
-      {
-        "json": {
-          "ok": true,
-          "result": {
-            "message_id": 52,
-            "from": {
-              "id": 7695897574,
-              "is_bot": true,
-              "first_name": "Yumana",
-              "username": "YumanaBot"
-            },
-            "chat": {
-              "id": 1282266650,
-              "first_name": "Yuma",
-              "last_name": "Nur Alfath",
-              "username": "yumana20",
-              "type": "private"
-            },
-            "date": 1753277407,
-            "text": "✅ Query yang terpilih:teknologi apa yang membuat layar reno 14 series responsif? ke 4 dari 10\n\nThis message was sent automatically with n8n",
-            "entities": [
-              {
-                "offset": 95,
-                "length": 41,
-                "type": "italic"
-              },
-              {
-                "offset": 136,
-                "length": 3,
-                "type": "text_link",
-                "url": "https://n8n.io/?utm_source=n8n-internal&utm_medium=powered_by&utm_campaign=n8n-nodes-base.telegram_5ce5c7bb69689bb5026a039f71db56efa2d930850a7172513b11beb1d0cdb7c3"
-              }
-            ],
-            "link_preview_options": {
-              "is_disabled": true
-            }
-          }
-        }
-      }
-    ],
     "Telegram Trigger": [
       {
         "json": {
-          "update_id": 145487840,
+          "update_id": 145487843,
           "message": {
-            "message_id": 210,
+            "message_id": 224,
             "from": {
               "id": 1282266650,
               "is_bot": false,
@@ -1339,8 +1299,8 @@
               "username": "yumana20",
               "type": "private"
             },
-            "date": 1753404685,
-            "text": "#q sejarah programmer",
+            "date": 1753409147,
+            "text": "#q Linux Terminal",
             "entities": [
               {
                 "offset": 0,
@@ -1352,12 +1312,20 @@
         }
       }
     ],
-    "Send message and wait for response1": [
+    "Schedule Trigger": [
       {
         "json": {
-          "data": {
-            "approved": true
-          }
+          "timestamp": "2025-07-28T00:00:40.008+07:00",
+          "Readable date": "July 28th 2025, 12:00:40 am",
+          "Readable time": "12:00:40 am",
+          "Day of week": "Monday",
+          "Year": "2025",
+          "Month": "July",
+          "Day of month": "28",
+          "Hour": "00",
+          "Minute": "00",
+          "Second": "40",
+          "Timezone": "Asia/Jakarta (UTC+07:00)"
         }
       }
     ]
@@ -1672,14 +1640,14 @@
       "main": [
         [
           {
-            "node": "Create a blog post",
+            "node": "Send a text message5",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Send a text message5",
+            "node": "Create a blog post",
             "type": "main",
             "index": 0
           }
@@ -1696,7 +1664,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "timeSavedPerExecution": 60
   },
-  "versionId": "cfd17099-f517-4f37-8630-208fb941fe86",
+  "versionId": "941fed59-4e5c-42d9-a403-3a6a0e2881c2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "5ce5c7bb69689bb5026a039f71db56efa2d930850a7172513b11beb1d0cdb7c3"
